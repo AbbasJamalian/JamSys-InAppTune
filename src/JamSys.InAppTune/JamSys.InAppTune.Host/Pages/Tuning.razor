@@ -1,0 +1,111 @@
+﻿@page "/tuning"
+@using JamSys.InAppTune.Agent
+@using JamSys.InAppTune.Host.Components
+@using JamSys.InAppTune.Host.Data
+@using JamSys.InAppTune.Host.Jobs
+@using Blazorise
+
+@inject ReadOnlyWorkloadJob readOnlyWorkloadJob
+@inject ReadWriteWorkloadJob readWriteWorkloadJob
+
+
+
+<PageTitle>Tuning</PageTitle>
+
+<Div Flex="Flex.Row">
+    <Icon Color="Color.Primary" Position="Position.Sticky" Margin="Margin.Is1.FromTop.IsAuto.FromBottom" Name="IconName.AngleLeft" IconSize="IconSize.x3"
+        Clicked="() => PreviousStep()">
+    </Icon>
+
+    <Div Width="Width.Is100">
+
+        <Steps @ref="stepsRef" @bind-SelectedStep="_selectedStep">
+            <Items>
+                <Step Name="1">Config</Step>
+                <Step Name="2">Baseline</Step>
+                <Step Name="3">Automatic</Step>
+                <Step Name="4">Training</Step>
+                <Step Name="5">Tuning</Step>
+                <Step Name="6">
+                    <Marker>
+                        <Icon Name="IconName.Flag" />
+                    </Marker>
+                    <Caption>
+                        Measure
+                    </Caption>
+                </Step>
+            </Items>
+            <Content>
+                <StepPanel Name="1">
+                    <TunerConfig @ref="_config" Jobs="_jobList"></TunerConfig>
+                </StepPanel>
+                <StepPanel Name="2">
+                    <Measurement></Measurement>
+                </StepPanel>
+                <StepPanel Name="3">
+                    <DataCollector></DataCollector>
+                </StepPanel>
+                <StepPanel Name="4">
+                    <Trainer></Trainer>
+                </StepPanel>
+                <StepPanel Name="5">
+                    <Tuner></Tuner>
+                </StepPanel>
+                <StepPanel Name="6">
+                    <Measurement></Measurement>
+                </StepPanel>
+            </Content>
+        </Steps>
+
+    </Div>
+    <Icon Color="Color.Primary" Position="Position.Sticky" Margin="Margin.Is1.FromTop.IsAuto.FromBottom" Name="IconName.AngleRight" IconSize="IconSize.x3"
+        Clicked="() => NextStep()">
+    </Icon>
+
+
+</Div>
+
+
+
+@code {
+    private int _slectedNumericStep = 1;
+    private string _selectedStep;
+
+    private Steps stepsRef;
+
+    private List<IJob> _jobList = new();
+
+    private TunerConfig _config;
+
+
+    protected override Task OnInitializedAsync()
+    {
+        _jobList.Clear();
+        _jobList.Add(readOnlyWorkloadJob);
+        _jobList.Add(readWriteWorkloadJob);
+        //_jobList.Add(stockLevelTransaction);
+
+        _selectedStep = _slectedNumericStep.ToString();
+        return base.OnInitializedAsync();
+    }
+
+    private void PreviousStep()
+    {
+        _slectedNumericStep = int.Parse(_selectedStep);
+        _slectedNumericStep--;
+        if (_slectedNumericStep <= 0)
+            _slectedNumericStep = 1;
+        _selectedStep = _slectedNumericStep.ToString();
+    }
+
+
+    private void NextStep()
+    {
+        _slectedNumericStep = int.Parse(_selectedStep);
+        _slectedNumericStep++;
+        if (_slectedNumericStep > 6)
+            _slectedNumericStep = 6;
+        _selectedStep = _slectedNumericStep.ToString();
+    }
+
+}

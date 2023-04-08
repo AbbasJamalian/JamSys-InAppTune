@@ -1,0 +1,139 @@
+@using Blazorise
+@using JamSys.InAppTune.Agent
+@using JamSys.InAppTune.Host.Jobs
+@using System.Reactive.Linq
+@using JamSys.InAppTune.Host.Data
+
+@implements IDisposable
+
+@inject Stats stats
+@inject WarehouseCreationJob warehouseCreationJob
+@inject ItemCreationJob itemCreationJob
+@inject CustomerCreationJob customerCreationJob
+
+
+<Card Margin="Margin.Is4.OnY">
+    <CardBody>
+        <CardTitle Size="5">Tuning Agent Status</CardTitle>
+        <CardText>
+
+            <ListGroup>
+                <ListGroupItem>Available Warehouses <Badge Color="Color.Primary">@stats.WarehouseCount</Badge>
+                <Progress Min="0" Max=@_numWarehouse @bind-value="@_warehouseProgress" Margin="Margin.Is2"></Progress>
+                </ListGroupItem>
+                <ListGroupItem>Items <Badge Color="Color.Primary">@stats.ItemCount</Badge>
+                <Progress Min="0" Max=@_numItems @bind-value="@_itemProgress" Margin="Margin.Is2"></Progress>
+                </ListGroupItem>
+                <ListGroupItem>Customers <Badge Color="Color.Primary">@stats.CustomerCount</Badge>
+                <Progress Min="0" Max=@_numCustomers @bind-value="@_customerProgress" Margin="Margin.Is2"></Progress>
+                </ListGroupItem>
+            </ListGroup>
+
+        </CardText>
+        <CardFooter>
+            <Button @onclick="OnStartBtnClicked">@_startBtnCaption</Button>
+        </CardFooter>
+    </CardBody>
+</Card>
+
+
+@code {
+    private Job _currentJob;
+
+    private string _startBtnCaption;
+
+    [Inject]
+    public IConfiguration Config { get; set; }
+
+    private IDisposable _warehouseSubscription;
+    private int _warehouseProgress;
+    private int _numWarehouse;
+
+    private IDisposable _customerSubscription;
+    private int _customerProgress;
+    private int _numCustomers;
+
+    private IDisposable _itemSubscription;
+    private int _itemProgress;
+    private int _numItems;
+
+    protected override Task OnInitializedAsync()
+    {
+        _numWarehouse = (int)Config.GetValue(typeof(int), "TPCC_Max_Warehouse");
+        _numCustomers = (int)Config.GetValue(typeof(int), "TPCC_Customer_Per_District") * _numWarehouse * 10;
+        _numItems = (int)Config.GetValue(typeof(int), "TPCC_Max_Items");
+
+        _startBtnCaption = "Start";
+        _currentJob = warehouseCreationJob;
+
+        _warehouseSubscription = warehouseCreationJob.Stats
+        .Subscribe(s =>
+        {
+            _warehouseProgress = (int) s.iteration;
+            InvokeAsync(() => StateHasChanged());
+        }, 
+        () =>
+        {
+            warehouseCreationJob.Stop();
+            _currentJob = itemCreationJob;
+            itemCreationJob.Start(1);
+        }
+        );
+
+        _itemSubscription = itemCreationJob.Stats
+        .Subscribe(s =>
+        {
+            _itemProgress = (int) s.iteration * 100;
+            InvokeAsync(() => StateHasChanged());
+        }, 
+        () =>
+        {
+            itemCreationJob.Stop();
+            _currentJob = customerCreationJob;
+            customerCreationJob.Start(1);
+        }
+        );
+
+        _customerSubscription = customerCreationJob.Stats
+        .Subscribe(s =>
+        {
+            _customerProgress = (int) s.iteration * 50;
+            InvokeAsync(() => StateHasChanged());
+        }, 
+        () =>
+        {
+            customerCreationJob.Stop();
+            _currentJob = warehouseCreationJob;
+            _startBtnCaption = "Start";
+            InvokeAsync(() => StateHasChanged());
+        }
+        );
+
+
+
+        return base.OnInitializedAsync();
+    }
+
+    public void Dispose()
+    {
+        _warehouseSubscription?.Dispose();
+        _itemSubscription?.Dispose();
+        _customerSubscription?.Dispose();
+    }
+
+    private void OnStartBtnClicked()
+    {
+        if(_currentJob.IsRunning)
+        {
+            _currentJob.Stop();
+            _startBtnCaption = "Start";
+        }
+        else
+        {
+            _currentJob.Start(1);
+            _startBtnCaption = "Stop";
+        }
+
+    }
+
+}

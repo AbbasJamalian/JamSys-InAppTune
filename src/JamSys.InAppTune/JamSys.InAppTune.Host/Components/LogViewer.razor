@@ -1,0 +1,116 @@
+﻿@using JamSys.InAppTune.Agent
+@using Blazorise.Charts
+
+<Card Margin="Margin.Is4.OnY">
+    <CardBody>
+        <CardTitle Size="5">Tuning Agent Status</CardTitle>
+        <CardText>
+
+            <ListGroup>
+                <ListGroupItem>State <Badge Color="Color.Primary">@_status.AgentState</Badge></ListGroupItem>
+                <ListGroupItem>Baseline Latency (ms) <Badge Color="Color.Warning">@_status.BaselineLatency</Badge></ListGroupItem>
+                <ListGroupItem>Current Latency (ms) <Badge Color="Color.Warning">@_status.CurrentLatency</Badge></ListGroupItem>
+                <ListGroupItem>Latest Action <Badge Color="Color.Info">@_status.LatestAction</Badge></ListGroupItem>
+                <ListGroupItem>Reward <Badge Color="Color.Info">@_status.Reward</Badge></ListGroupItem>
+                <ListGroupItem>Experience Replay <Badge Color="Color.Info">@_status.ExperienceReplaySize</Badge></ListGroupItem>
+            </ListGroup>
+            
+            <LineChart @ref="lineChart" TItem="float" OptionsObject="@chartOptions" />
+
+        </CardText>
+        <CardFooter>
+            <Text>@_status.Message</Text>
+
+            <Button @onclick="OnSaveBtnClicked">Save</Button>
+        </CardFooter>
+    </CardBody>
+</Card>
+
+
+
+@code {
+    private AgentStatus _status = new();
+
+    LineChart<float> lineChart;
+
+    List<string> _labels = new List<string>();
+    List<float> _data = new List<float>();
+
+    LineChartOptions _lineChartOptions;
+
+    private int _iteration = 1;
+    private float _commulativeReward = 0;
+
+    object chartOptions = new
+    {
+        Scales = new
+        {
+            YAxes = new[] {
+                new {
+                    Ticks = new
+                    {
+                        BeginAtZero = true,
+                        Min = 0,
+                        Max = 500,
+                    }
+                }
+        }
+        }
+    };
+
+
+    protected override Task OnInitializedAsync()
+    {
+        TuningAgent.Instance.StatusChanged.Subscribe(h =>
+        {
+            _status = h;
+            //_commulativeReward += _status.Reward;
+            //lineChart.AddData(0, _commulativeReward);
+
+            //lineChart.AddData(0, _status.CurrentLatency);
+            lineChart.AddData(0, _status.Accuracy);
+
+            //lineChart.AddData(0, _status.Reward);
+            lineChart.AddLabels(_iteration++);
+            lineChart.Update();
+
+
+            InvokeAsync(() => StateHasChanged());
+        });
+        return base.OnInitializedAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            //await lineChart.SetOptions((LineChartOptions) chartOptions);
+
+            await lineChart.AddLabelsDatasetsAndUpdate(_labels, GetLineChartDataset());
+
+            await lineChart.AddData(0, 0);
+            await lineChart.AddLabels(0);
+            await lineChart.Update();
+
+        }
+    }
+
+    LineChartDataset<float> GetLineChartDataset()
+    {
+        return new LineChartDataset<float>
+            {
+                Label = "Latency",
+                Data = _data,
+                Fill = true,
+                PointRadius = 1,
+                CubicInterpolationMode = "monotone",
+            };
+    }
+
+
+
+    private void OnSaveBtnClicked()
+    {
+        TuningAgent.Instance.Save("experiencereplay.json");
+    }
+}

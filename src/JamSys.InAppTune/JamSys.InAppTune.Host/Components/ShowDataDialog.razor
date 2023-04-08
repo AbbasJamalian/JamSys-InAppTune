@@ -1,0 +1,32 @@
+<Modal @ref="_modalRef" ShowBackdrop="true" Style="z-index:9900">
+    <ModalContent Centered Shadow="Shadow.Large">
+        <ModalHeader>
+            <ModalTitle>Export Data</ModalTitle>
+            <CloseButton/>
+        </ModalHeader>
+        <ModalBody>
+            <Div Height="Height.Is100" Display="Display.Flex" Flex="Flex.Column">
+                <MemoEdit @bind-Text="@_data" />
+            </Div>
+        </ModalBody>
+        <ModalFooter>
+            <Button Color="Color.Secondary" Clicked="@HideModal">Close</Button>
+        </ModalFooter>
+    </ModalContent>
+</Modal>
+
+@code{
+    private Modal _modalRef;
+
+    private string _data;
+    private Task HideModal()
+    {
+        return _modalRef.Hide();
+    }
+
+    public async Task Show(string data)
+    {
+        _data = data;
+        await _modalRef.Show();
+    }
+}

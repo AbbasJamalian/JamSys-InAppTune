@@ -1,0 +1,29 @@
+﻿@page "/"
+
+@using Blazorise
+
+<PageTitle>Home</PageTitle>
+<Heading Size="HeadingSize.Is1">InAppTune Host Application</Heading>
+<Heading Size="HeadingSize.Is6">Copyright (c) 2023  Abbas Jamalian</Heading>
+
+<Div Flex="Flex.Row.Wrap" Width="Width.Is100">
+    <Div Margin="Margin.Is4.OnAll">
+        <Link To="/datagenerator" TextColor="TextColor.Light">
+        <Figure Size="FigureSize.Is128x128" Background="Background.Primary" TextAlignment="TextAlignment.Center">
+            <Icon IconSize="IconSize.x3" class="oi oi-list-rich" Margin="Margin.Is4.FromTop"></Icon>
+            <Heading Size="HeadingSize.Is6" TextAlignment="TextAlignment.Center" Margin="Margin.Is3.FromTop">Data
+            </Heading>
+        </Figure>
+        </Link>
+    </Div>
+
+    <Div Margin="Margin.Is4.OnAll">
+        <Link To="/tuning" TextColor="TextColor.Light">
+        <Figure Size="FigureSize.Is128x128" Background="Background.Primary" TextAlignment="TextAlignment.Center">
+            <Icon IconSize="IconSize.x3" class="oi oi-dial" Margin="Margin.Is4.FromTop"></Icon>
+            <Heading Size="HeadingSize.Is6" TextAlignment="TextAlignment.Center" Margin="Margin.Is3.FromTop">Tune
+            </Heading>
+        </Figure>
+        </Link>
+    </Div>
+</Div>

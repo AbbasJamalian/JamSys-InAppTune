@@ -1,0 +1,77 @@
+﻿@using JamSys.InAppTune.Host.Data
+@using Microsoft.EntityFrameworkCore
+@using JamSys.InAppTune.Knobs
+@using System.Text
+
+@inject DbContextOptions<TpccContext> options
+
+<Card Margin="Margin.Is4.OnY">
+    <CardBody>
+        <CardTitle Size="5">Manual Tuner</CardTitle>
+        <CardText>
+            @foreach(var knob in _knobs)
+            {
+                <ManualKnob Name=@knob.Name Min=@knob.Minimum Max=@knob.Maximum Default=@knob.DefaultValue></ManualKnob>
+            }
+            @*
+            <ManualKnob Name="table_open_cache" Min=1 Max=524288 Default=2000></ManualKnob>
+            <ManualKnob Name="max_connections" Min=1 Max=100000 Default=151></ManualKnob>
+            <ManualKnob Name="innodb_buffer_pool_size" Min=524288 Max=4294967295 Default=134217728></ManualKnob>
+            <ManualKnob Name="binlog_cache_size" Min=4096 Max=18446744073709547520 Default=32768></ManualKnob>
+            <ManualKnob Name="max_binlog_cache_size" Min=4096 Max=18446744073709547520 Default=18446744073709547520></ManualKnob>
+            <ManualKnob Name="max_binlog_size" Min=4096 Max=1073741824 Default=1073741824></ManualKnob>
+
+            <ManualKnob Name="tmp_table_size" Min=1024 Max=18446744073709551615 Default=16777216></ManualKnob>
+            *@
+        </CardText>
+    </CardBody>
+    <CardFooter>
+        <Badge @onclick="OnExportClicked" Background="Background.Info">Export %</Badge>
+        <Badge @onclick="OnExportValuesClicked" Background="Background.Info">Export Values %</Badge>
+    </CardFooter>
+</Card>
+
+<ShowDataDialog @ref="_showDataDialog"></ShowDataDialog>
+
+@code {
+    ShowDataDialog _showDataDialog;
+    IReadOnlyList<Knob> _knobs;
+    protected override Task OnInitializedAsync()
+    {
+        using (var repo = new TpccContext(options))
+        {
+            _knobs = repo.Agent.KnobProvider.Knobs;
+        }
+        return base.OnInitializedAsync();
+    }
+
+    private async Task OnExportClicked()
+    {
+        await _showDataDialog.Show(Export(false));
+        Console.WriteLine("Exporting knobs");
+    }
+
+    private async Task OnExportValuesClicked()
+    {
+        await _showDataDialog.Show(Export(true));
+        Console.WriteLine("Exporting knobs");
+    }
+
+    private string Export(bool onlyValues)
+    {
+        StringBuilder data = new ();
+
+        int value = 0;
+        int index = 0;
+        foreach (var knob in _knobs)
+        {
+            value = (int) Math.Round(knob.PercentageValue);
+            string item = onlyValues ? value.ToString() : knob.Name + "," + value.ToString();
+            data.AppendLine(item);
+            index++;
+        }
+        return data.ToString();
+    }
+
+
+}

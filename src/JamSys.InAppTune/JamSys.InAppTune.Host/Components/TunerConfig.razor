@@ -1,0 +1,159 @@
+﻿@using JamSys.InAppTune.Agent
+@using JamSys.InAppTune.Host.Jobs
+
+@inject Store Store;
+
+<Row>
+    <Column ColumnSize="ColumnSize.Is4">
+        <Card>
+            <CardHeader>
+                <Heading Size="HeadingSize.Is4">Job Configuration</Heading>
+            </CardHeader>
+            <CardBody>
+                <Field>
+                    <FieldLabel>Tuning Job</FieldLabel>
+                    <Select TValue="string" SelectedValue="@Store.SelectedJob.Title"
+                        SelectedValueChanged="@OnSelectedValueChanged">
+                        @foreach (var job in Jobs)
+                        {
+                            <SelectItem Value="job.Title">@job.Title</SelectItem>
+                        }
+                    </Select>
+                </Field>
+                <Field>
+                    <FieldLabel>Number of Cuncurrent Job Instances</FieldLabel>
+                    <NumericEdit @bind-Value="Store.NumParallelExecutions"></NumericEdit>
+                </Field>
+                <Field>
+                    <FieldLabel>Job Parameter</FieldLabel>
+                    <NumericEdit @bind-Value="Store.JobParameter"></NumericEdit>
+                </Field>
+                <Field>
+                    <FieldLabel>Job Limit</FieldLabel>
+                    <NumericEdit @bind-Value="Store.JobLimit"></NumericEdit>
+                </Field>
+
+            </CardBody>
+        </Card>
+    </Column>
+    <Column ColumnSize="ColumnSize.Is4">
+        <Card>
+            <CardHeader>
+                <Heading Size="HeadingSize.Is4">Reinforcement Learning</Heading>
+            </CardHeader>
+            <CardBody>
+                <Field>
+                    <FieldLabel>Number of Episodes</FieldLabel>
+                    <NumericEdit @bind-Value="TuningAgent.Instance.Config.NumberOfEpisodes"></NumericEdit>
+                </Field>
+                <Field>
+                    <FieldLabel>Initialize Episode to random Values</FieldLabel>
+                    <Switch TValue="bool" @bind-Checked="TuningAgent.Instance.Config.InitializeEpisodeRandom"></Switch>
+                </Field>
+                <Field>
+                    <FieldLabel>Explorations per Episode</FieldLabel>
+                    <NumericEdit @bind-Value="TuningAgent.Instance.Config.ExplorationsPerEpisode"></NumericEdit>
+                </Field>
+                <Field>
+                    <FieldLabel>Reward Function</FieldLabel>
+                    <Select TValue="string" SelectedValue="@TuningAgent.Instance.Config.RewardFunction"
+                        SelectedValueChanged="@OnSelectedRewardFunctionChanged">
+                        @foreach (var rewardFunction in TuningAgent.Instance.Config.AvailableRewardFunctions)
+                        {
+                            <SelectItem Value="rewardFunction">@rewardFunction</SelectItem>
+                        }
+                    </Select>
+                </Field>
+                <Field>
+                    <FieldLabel>Accuracy Threshold to decrease Epsilon Greedy</FieldLabel>
+                    <NumericEdit Min="0" Max="100"
+                        @bind-Value="TuningAgent.Instance.Config.AccuracyThresholdForEpsilonreedy">
+                    </NumericEdit>
+                </Field>
+                <Field>
+                    <FieldLabel>Weight to increase knobs</FieldLabel>
+                    <NumericEdit Min="0" Max="100" @bind-Value="TuningAgent.Instance.Config.WeightIncreasingKnobs">
+                    </NumericEdit>
+                </Field>
+                <Field>
+                    <FieldLabel>Set best values on Finish</FieldLabel>
+                    <Switch TValue="bool" @bind-Checked="TuningAgent.Instance.Config.SetBestValuesOnFinish"></Switch>
+                </Field>
+
+            </CardBody>
+        </Card>
+
+    </Column>
+    <Column ColumnSize="ColumnSize.Is4">
+        <Card>
+            <CardHeader>
+                <Heading Size="HeadingSize.Is4">Network</Heading>
+            </CardHeader>
+            <CardBody>
+                <Field>
+                    <FieldLabel>Train during data collection</FieldLabel>
+                    <Switch TValue="bool" @bind-Checked="TuningAgent.Instance.Config.TrainDuringDataCollection">
+                    </Switch>
+                </Field>
+                <Field>
+                    <FieldLabel>Experience Replay Threshold</FieldLabel>
+                    <NumericEdit @bind-Value="TuningAgent.Instance.Config.ExperienceReplayThreshold"></NumericEdit>
+                </Field>
+
+                <Field>
+                    <FieldLabel>Trainings per Iteration</FieldLabel>
+                    <NumericEdit @bind-Value="TuningAgent.Instance.Config.TrainingsPerIteration"></NumericEdit>
+                </Field>
+
+                <Field>
+                    <FieldLabel>Epoches to copy QNet to Target Net</FieldLabel>
+                    <NumericEdit @bind-Value="TuningAgent.Instance.Config.EpochesToCopyQNet"></NumericEdit>
+                </Field>
+                <Field>
+                    <FieldLabel>Learning Rate</FieldLabel>
+                    <NumericEdit TValue="decimal?" @bind-Value="TuningAgent.Instance.Config.LearningRate"></NumericEdit>
+                </Field>
+                <Field>
+                    <FieldLabel>Discount Factor</FieldLabel>
+                    <NumericEdit TValue="decimal?" @bind-Value="TuningAgent.Instance.Config.DiscountFactor">
+                    </NumericEdit>
+                </Field>
+                <Field ColumnSize="ColumnSize.Is12.OnDesktop">
+                    <FieldLabel>Network Topology</FieldLabel>
+                    <TextEdit TValue="string" @bind-Text="TuningAgent.Instance.Config.NetworkTopology"></TextEdit>
+                </Field>
+
+            </CardBody>
+        </Card>
+
+    </Column>
+
+</Row>
+
+
+
+
+
+
+
+@code {
+
+    [Parameter]
+    public List<IJob> Jobs { get; set; }
+
+    protected override Task OnInitializedAsync()
+    {
+        Store.SelectedJob = Jobs[0];
+        return base.OnInitializedAsync();
+    }
+
+    void OnSelectedValueChanged(string value)
+    {
+        Store.SelectedJob = Jobs.FirstOrDefault(j => j.Title.Equals(value));
+    }
+
+    void OnSelectedRewardFunctionChanged(string value)
+    {
+        TuningAgent.Instance.Config.RewardFunction = value;
+    }
+}

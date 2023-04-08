@@ -1,0 +1,118 @@
+@using Blazorise
+@using Blazorise.Components
+@using JamSys.InAppTune.Agent
+
+<Modal @ref="_modalRef" ShowBackdrop="true" Style="z-index:9900">
+    <ModalContent Centered Shadow="Shadow.Large">
+        <ModalHeader>
+            <ModalTitle>@_title</ModalTitle>
+            <CloseButton />
+        </ModalHeader>
+        <ModalBody>
+            @if (_isSaveMode)
+            {
+                <TextEdit @bind-Text="_outputFile"></TextEdit>
+            }
+            else
+            {
+                <Autocomplete TItem="string" TValue="string" Data="@_experimentList" TextField="@((item) => item)"
+                ValueField="@((item) => item)" @bind-SelectedValue="@_inputFile" Placeholder="Select Experiment ..."
+                Filter="AutocompleteFilter.Contains" FreeTyping MinLength="0">
+                </Autocomplete>
+
+            }
+        </ModalBody>
+        <ModalFooter>
+            <Button Color="Color.Secondary" Clicked="@HideModal">Close</Button>
+            @if (_isSaveMode)
+            {
+                <Button Color="Color.Primary" Clicked="@Save">Save</Button>
+            }
+            else
+            {
+                <Button Color="Color.Primary" Clicked="@Load">Load</Button>
+            }
+        </ModalFooter>
+    </ModalContent>
+</Modal>
+
+@code {
+    private Modal _modalRef;
+
+    private string _title;
+    private bool _isSaveMode;
+
+    private string _outputFile;
+
+    [Inject]
+    public IWebHostEnvironment Env { get; set; }
+
+    private List<string> _experimentList;
+
+    private string _experimentsFolder;
+
+    private string _inputFile;
+
+    [Parameter]
+    public EventCallback OnLoadFinished { get; set; }
+
+    protected override void OnInitialized()
+    {
+        string rootPath = Env.ContentRootPath;
+
+        _experimentsFolder = Path.Combine(rootPath, "Experiments");
+
+        if (!Directory.Exists(_experimentsFolder))
+            Directory.CreateDirectory(_experimentsFolder);
+        else
+        {
+            RefreshExperimentList();
+        }
+
+
+        base.OnInitialized();
+    }
+
+    private void RefreshExperimentList()
+    {
+        _experimentList = new();
+
+        // Enumerate existing experiments
+        var files = Directory.GetFiles(_experimentsFolder, "*.json");
+
+        foreach (var file in files)
+        {
+            _experimentList.Add(Path.GetFileNameWithoutExtension(file));
+        }
+    }
+
+    private Task HideModal()
+    {
+        return _modalRef.Hide();
+    }
+
+    private async Task Save()
+    {
+        string filename = Path.Combine(_experimentsFolder, _outputFile + ".json");
+        TuningAgent.Instance.Save(filename);
+        RefreshExperimentList();
+        await HideModal();
+    }
+
+    private async Task Load()
+    {
+        string filename = Path.Combine(_experimentsFolder, _inputFile + ".json");
+        await TuningAgent.Instance.Load(filename);
+
+        await OnLoadFinished.InvokeAsync();
+        await HideModal();
+    }
+
+    public async Task Show(bool isSaveMode)
+    {
+        _isSaveMode = isSaveMode;
+        _title = _isSaveMode ? "Save" : "Load";
+        await _modalRef.Show();
+    }
+}
+

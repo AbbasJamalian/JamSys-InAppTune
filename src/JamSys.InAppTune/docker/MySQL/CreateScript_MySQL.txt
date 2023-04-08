@@ -1,0 +1,146 @@
+﻿CREATE TABLE IF NOT EXISTS `__EFMigrationsHistory` (
+    `MigrationId` varchar(150) CHARACTER SET utf8mb4 NOT NULL,
+    `ProductVersion` varchar(32) CHARACTER SET utf8mb4 NOT NULL,
+    CONSTRAINT `PK___EFMigrationsHistory` PRIMARY KEY (`MigrationId`)
+) CHARACTER SET=utf8mb4;
+
+START TRANSACTION;
+
+ALTER DATABASE CHARACTER SET utf8mb4;
+
+CREATE TABLE `customer` (
+    `c_id` int NOT NULL,
+    `c_w_id` int NOT NULL,
+    `c_d_id` smallint NOT NULL,
+    `c_since` datetime(6) NOT NULL,
+    `c_payment_cnt` smallint NOT NULL,
+    `c_delivery_cnt` smallint NOT NULL,
+    `c_first` varchar(16) CHARACTER SET utf8mb4 NOT NULL,
+    `c_middle` char(2) CHARACTER SET utf8mb4 NOT NULL,
+    `c_last` varchar(16) CHARACTER SET utf8mb4 NOT NULL,
+    `c_street_1` varchar(20) CHARACTER SET utf8mb4 NOT NULL,
+    `c_street_2` varchar(20) CHARACTER SET utf8mb4 NOT NULL,
+    `c_city` varchar(20) CHARACTER SET utf8mb4 NOT NULL,
+    `c_state` char(2) CHARACTER SET utf8mb4 NOT NULL,
+    `c_zip` char(9) CHARACTER SET utf8mb4 NOT NULL,
+    `c_phone` char(16) CHARACTER SET utf8mb4 NOT NULL,
+    `c_credit` char(2) CHARACTER SET utf8mb4 NOT NULL,
+    `c_credit_lim` decimal(12,2) NOT NULL,
+    `c_discount` decimal(4,4) NOT NULL,
+    `c_balance` decimal(12,2) NOT NULL,
+    `c_ytd_payment` decimal(12,2) NOT NULL,
+    `c_data` varchar(500) CHARACTER SET utf8mb4 NOT NULL,
+    CONSTRAINT `customer_i1` PRIMARY KEY (`c_w_id`, `c_d_id`, `c_id`)
+) CHARACTER SET=utf8mb4;
+
+CREATE TABLE `district` (
+    `d_w_id` int NOT NULL,
+    `d_id` smallint NOT NULL,
+    `d_next_o_id` int NOT NULL,
+    `d_ytd` decimal(12,2) NOT NULL,
+    `d_tax` decimal(4,4) NOT NULL,
+    `d_name` varchar(10) CHARACTER SET utf8mb4 NOT NULL,
+    `d_street_1` varchar(20) CHARACTER SET utf8mb4 NOT NULL,
+    `d_street_2` varchar(20) CHARACTER SET utf8mb4 NOT NULL,
+    `d_city` varchar(20) CHARACTER SET utf8mb4 NOT NULL,
+    `d_state` char(2) CHARACTER SET utf8mb4 NOT NULL,
+    `d_zip` char(9) CHARACTER SET utf8mb4 NOT NULL,
+    CONSTRAINT `district_i1` PRIMARY KEY (`d_w_id`, `d_id`)
+) CHARACTER SET=utf8mb4;
+
+CREATE TABLE `history` (
+    `h_date` datetime(6) NOT NULL,
+    `h_c_id` int NULL,
+    `h_c_w_id` int NOT NULL,
+    `h_w_id` int NOT NULL,
+    `h_c_d_id` smallint NOT NULL,
+    `h_d_id` smallint NOT NULL,
+    `h_amount` decimal(6,2) NOT NULL,
+    `h_data` varchar(24) CHARACTER SET utf8mb4 NOT NULL
+) CHARACTER SET=utf8mb4;
+
+CREATE TABLE `item` (
+    `i_id` int NOT NULL,
+    `i_im_id` int NOT NULL,
+    `i_name` varchar(24) CHARACTER SET utf8mb4 NOT NULL,
+    `i_price` decimal(5,2) NOT NULL,
+    `i_data` varchar(50) CHARACTER SET utf8mb4 NOT NULL,
+    CONSTRAINT `item_i1` PRIMARY KEY (`i_id`)
+) CHARACTER SET=utf8mb4;
+
+CREATE TABLE `new_order` (
+    `no_w_id` int NOT NULL,
+    `no_o_id` int NOT NULL,
+    `no_d_id` smallint NOT NULL,
+    CONSTRAINT `new_order_i1` PRIMARY KEY (`no_w_id`, `no_d_id`, `no_o_id`)
+) CHARACTER SET=utf8mb4;
+
+CREATE TABLE `order_line` (
+    `ol_o_id` int NOT NULL,
+    `ol_w_id` int NOT NULL,
+    `ol_d_id` smallint NOT NULL,
+    `ol_number` smallint NOT NULL,
+    `ol_delivery_d` datetime(6) NULL,
+    `ol_i_id` int NOT NULL,
+    `ol_supply_w_id` int NOT NULL,
+    `ol_quantity` smallint NOT NULL,
+    `ol_amount` decimal(6,2) NULL,
+    `ol_dist_info` char(24) CHARACTER SET utf8mb4 NULL,
+    CONSTRAINT `order_line_i1` PRIMARY KEY (`ol_w_id`, `ol_d_id`, `ol_o_id`, `ol_number`)
+) CHARACTER SET=utf8mb4;
+
+CREATE TABLE `orders` (
+    `o_id` int NOT NULL,
+    `o_w_id` int NOT NULL,
+    `o_d_id` smallint NOT NULL,
+    `o_entry_d` datetime(6) NOT NULL,
+    `o_c_id` int NOT NULL,
+    `o_carrier_id` smallint NULL,
+    `o_ol_cnt` smallint NOT NULL,
+    `o_all_local` smallint NOT NULL,
+    CONSTRAINT `orders_i1` PRIMARY KEY (`o_w_id`, `o_d_id`, `o_id`)
+) CHARACTER SET=utf8mb4;
+
+CREATE TABLE `stock` (
+    `s_i_id` int NOT NULL,
+    `s_w_id` int NOT NULL,
+    `s_ytd` int NOT NULL,
+    `s_quantity` smallint NOT NULL,
+    `s_order_cnt` smallint NOT NULL,
+    `s_remote_cnt` smallint NOT NULL,
+    `s_dist_01` char(24) CHARACTER SET utf8mb4 NOT NULL,
+    `s_dist_02` char(24) CHARACTER SET utf8mb4 NOT NULL,
+    `s_dist_03` char(24) CHARACTER SET utf8mb4 NOT NULL,
+    `s_dist_04` char(24) CHARACTER SET utf8mb4 NOT NULL,
+    `s_dist_05` char(24) CHARACTER SET utf8mb4 NOT NULL,
+    `s_dist_06` char(24) CHARACTER SET utf8mb4 NOT NULL,
+    `s_dist_07` char(24) CHARACTER SET utf8mb4 NOT NULL,
+    `s_dist_08` char(24) CHARACTER SET utf8mb4 NOT NULL,
+    `s_dist_09` char(24) CHARACTER SET utf8mb4 NOT NULL,
+    `s_dist_10` char(24) CHARACTER SET utf8mb4 NOT NULL,
+    `s_data` varchar(50) CHARACTER SET utf8mb4 NOT NULL,
+    CONSTRAINT `stock_i1` PRIMARY KEY (`s_w_id`, `s_i_id`)
+) CHARACTER SET=utf8mb4;
+
+CREATE TABLE `warehouse` (
+    `w_id` int NOT NULL,
+    `w_name` varchar(10) CHARACTER SET utf8mb4 NOT NULL,
+    `w_street_1` varchar(20) CHARACTER SET utf8mb4 NOT NULL,
+    `w_street_2` varchar(20) CHARACTER SET utf8mb4 NOT NULL,
+    `w_city` varchar(20) CHARACTER SET utf8mb4 NOT NULL,
+    `w_state` char(2) CHARACTER SET utf8mb4 NOT NULL,
+    `w_zip` char(9) CHARACTER SET utf8mb4 NOT NULL,
+    `w_tax` decimal(4,4) NOT NULL,
+    `w_ytd` decimal(12,2) NOT NULL,
+    CONSTRAINT `warehouse_i1` PRIMARY KEY (`w_id`)
+) CHARACTER SET=utf8mb4;
+
+CREATE UNIQUE INDEX `customer_i2` ON `customer` (`c_w_id`, `c_d_id`, `c_last`, `c_first`, `c_id`);
+
+CREATE UNIQUE INDEX `orders_i2` ON `orders` (`o_w_id`, `o_d_id`, `o_c_id`, `o_id`);
+
+INSERT INTO `__EFMigrationsHistory` (`MigrationId`, `ProductVersion`)
+VALUES ('20220702094208_InitialCreate', '6.0.6');
+
+COMMIT;
+

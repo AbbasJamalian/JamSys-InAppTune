@@ -1,0 +1,123 @@
+﻿@using Blazorise
+@using JamSys.InAppTune.Agent
+@using JamSys.InAppTune.Host.Jobs
+
+@inject TrainNetworkJob Job;
+@implements IDisposable
+
+<Row>
+    <Column>
+        <Card>
+            <CardBody>
+                <SingleChart @ref="_lossChart" DataLabel="Network Loss"></SingleChart>
+                <Progress Min="0" Max="250" @bind-value="@_progressValue" Margin="Margin.Is2">@_progressValue</Progress>
+                <Badge Color="Color.Primary">@_elapsedTime</Badge>
+            </CardBody>
+            <CardFooter>
+                <Div Display="Display.Flex" Flex="Flex.Row.Grow" Margin="Margin.Is2">
+                    <Button Color="Color.Primary" Margin="Margin.Is2"
+                        Clicked="OnStartBtnClicked">@_buttonCaption</Button>
+                    <Button Color="Color.Secondary" Margin="Margin.Is2" Clicked="OnResetBtnClicked">Reset</Button>
+                </Div>
+            </CardFooter>
+        </Card>
+    </Column>
+    <Column>
+        <Card>
+            <CardBody>
+                <SingleChart @ref="_accuracyChart" DataLabel="Accuracy (%)"></SingleChart>
+            </CardBody>
+        </Card>
+    </Column>
+</Row>
+<Row>
+</Row>
+
+
+@code {
+    private IDisposable _subscription;
+
+    private SingleChart _lossChart;
+    private SingleChart _accuracyChart;
+    private string _buttonCaption;
+    private int _progressValue;
+
+    private int _maxEpoches;
+
+    private DateTime _startTime;
+    private System.Timers.Timer _timer;
+
+    private string _elapsedTime;
+
+    protected override Task OnInitializedAsync()
+    {
+        _timer = new System.Timers.Timer(1000);
+        _timer.Enabled = false;
+        _timer.Elapsed += OnTimerElapsed;
+
+        UpdateCaption();
+
+        //_subscription = Job.Stats.Subscribe(s => _chart.AddData(s.duration));
+        _subscription = TuningAgent.Instance.TrainingStatusChanged.Subscribe(
+        s =>
+        {
+            _lossChart.AddData(s.loss);
+            _accuracyChart.AddData(s.accuracy);
+            _progressValue = s.epoche;
+
+            if (_progressValue >= _maxEpoches)
+            {
+                Job.Stop();
+                _buttonCaption = "Start";
+                _timer.Enabled = false;
+            }
+
+            InvokeAsync(() => StateHasChanged());
+        });
+
+        return base.OnInitializedAsync();
+    }
+
+    public void Dispose()
+    {
+        _subscription?.Dispose();
+        _timer.Elapsed -= OnTimerElapsed;
+        _timer.Dispose();
+
+    }
+    private void OnTimerElapsed(Object source, System.Timers.ElapsedEventArgs e)
+    {
+        var elapsed = e.SignalTime - _startTime;
+        _elapsedTime = elapsed.ToString("g");
+        InvokeAsync(() => StateHasChanged());
+    }
+
+    private void UpdateCaption()
+    {
+        _buttonCaption = Job.IsRunning ? "Stop" : "Start";
+    }
+
+    private void OnStartBtnClicked()
+    {
+        _maxEpoches = (TuningAgent.Instance.Config.NumberOfEpisodes * TuningAgent.Instance.Config.ExplorationsPerEpisode) - TuningAgent.Instance.Config.ExperienceReplayThreshold;
+        _startTime = DateTime.Now;
+        Job.Toggle(1);
+        UpdateCaption();
+        _timer.Enabled = Job.IsRunning;
+    }
+
+    private void OnResetBtnClicked()
+    {
+        _elapsedTime = "00:00";
+        Job.Stop();
+        _timer.Enabled = Job.IsRunning;
+
+        _lossChart.Clear();
+        _accuracyChart.Clear();
+        _progressValue = 0;
+        TuningAgent.Instance.ResetNetwork();
+
+        UpdateCaption();
+    }
+
+}

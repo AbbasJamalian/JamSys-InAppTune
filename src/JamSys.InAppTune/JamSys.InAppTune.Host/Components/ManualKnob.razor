@@ -1,0 +1,121 @@
+﻿@using JamSys.InAppTune.Agent
+@using JamSys.InAppTune.Host.Data
+@using Microsoft.EntityFrameworkCore
+
+@inject DbContextOptions<TpccContext> options
+
+<Div>
+    <Text>@Name</Text>
+    <Button Float="Float.End" Border="Border.OnBottom" @onclick="ResetKnob">Reset</Button>
+    <Badge Color=@BadgeColor>@_knobValue.ToString()</Badge>
+    <Slider TValue="ulong" @bind-Value="@_knobValue" Min="@Min" Max="@Max" @onchange="UpdateKnob"></Slider>
+    <Text TextColor="TextColor.Danger">@_errorMessage</Text>
+</Div>
+@code {
+    private ulong _knobValue;
+
+    [Parameter]
+    public string Name { get; set; }
+
+    [Parameter]
+    public ulong Min { get; set; }
+
+    [Parameter]
+    public ulong Max { get; set; }
+
+    [Parameter]
+    public ulong Default { get; set; }
+
+    [Parameter]
+    public string GetStatement { get; set; }
+
+    [Parameter]
+    public string SetStatement { get; set; }
+
+    [Parameter]
+    public Blazorise.Color BadgeColor { get; set; } = Blazorise.Color.Primary;
+
+    private string _errorMessage;
+
+    protected override void OnInitialized()
+    {
+        TuningAgent.Instance.KnobChanged.Subscribe(k =>
+        {
+            if (k.knobName == Name)
+            {
+                _knobValue = k.value;
+
+                if (_knobValue == Default)
+                    BadgeColor = Blazorise.Color.Primary;
+                else if (_knobValue > Default)
+                    BadgeColor = Blazorise.Color.Success;
+                else
+                    BadgeColor = Blazorise.Color.Danger;
+
+                InvokeAsync(() => StateHasChanged());
+            }
+        });
+        ReadKnobValue();
+        base.OnInitialized();
+    }
+
+    private void ResetKnob()
+    {
+        _knobValue = Default;
+        UpdateKnob();
+    }
+
+    private void UpdateKnob()
+    {
+        string statement = string.Format("SET GLOBAL {0} = {1}", Name, _knobValue);
+        Console.WriteLine($"Knob value changed { _knobValue}");
+
+        try
+        {
+            var knob = TuningAgent.Instance.KnobProvider.Knobs.FirstOrDefault(k => k.Name.Equals(Name));
+            if (knob.Value != _knobValue)
+            {
+                using (var repo = new TpccContext(options))
+                {
+                    repo.Agent.KnobProvider.SetKnobValue(repo, Name, _knobValue);
+                    _errorMessage = string.Empty;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+
+        ReadKnobValue();
+    }
+
+    private void ReadKnobValue()
+    {
+        try
+        {
+            ulong result = 0;
+            using (var repo = new TpccContext(options))
+            {
+                //result = repo.Agent.KnobProvider.FetchKnobValue(repo, Name);
+
+                var knob = repo.Agent.KnobProvider.Knobs.FirstOrDefault(k => k.Name.Equals(Name));
+                if(knob != null) 
+                    result = knob.Value;
+                _knobValue = result;
+
+                if (_knobValue == Default)
+                    BadgeColor = Blazorise.Color.Primary;
+                else if (_knobValue > Default)
+                    BadgeColor = Blazorise.Color.Success;
+                else
+                    BadgeColor = Blazorise.Color.Danger;
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+}

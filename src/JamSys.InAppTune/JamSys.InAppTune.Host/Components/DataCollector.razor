@@ -1,0 +1,156 @@
+﻿@using Blazorise
+@using JamSys.InAppTune.Agent
+@using JamSys.InAppTune.Host.Jobs
+@using System.Reactive.Linq
+
+@implements IDisposable
+
+@inject Store Store;
+
+<Row>
+    <Column>
+        <Card>
+            <CardBody>
+                <SingleChart @ref="_chart" DataLabel="Latency (ms)"></SingleChart>
+                <Progress Min="0" Max="100" @bind-value="@_progressValue" Margin="Margin.Is2"></Progress>
+
+                <ListGroup>
+                    <ListGroupItem>State <Badge Color="Color.Primary">@_status.AgentState</Badge></ListGroupItem>
+                    <ListGroupItem>Baseline Latency (ms) <Badge Color="Color.Warning">@_status.BaselineLatency</Badge></ListGroupItem>
+                    <ListGroupItem>Current Latency (ms) <Badge Color="Color.Warning">@_status.CurrentLatency</Badge></ListGroupItem>
+                    <ListGroupItem>Latest Action <Badge Color="Color.Info">@_status.LatestAction</Badge></ListGroupItem>
+                    <ListGroupItem>Reward <Badge Color="Color.Info">@_status.Reward</Badge></ListGroupItem>
+                    <ListGroupItem>Experience Replay <Badge Color="Color.Info">@_status.ExperienceReplaySize</Badge></ListGroupItem>
+                    <ListGroupItem>Epsilon Greedy Rate <Badge Color="Color.Info">@_status.EpsilonGreedyRate</Badge></ListGroupItem>
+                    <ListGroupItem>Resource Utilization <Badge Color="Color.Info">@_status.ResourceUtilization</Badge></ListGroupItem>
+                    <ListGroupItem>Elapsed Time: <Badge Color="Color.Primary">@_elapsedTime</Badge></ListGroupItem>
+                    <ListGroupItem><Badge Color="Color.Danger">@_errorMessage</Badge></ListGroupItem>
+                </ListGroup>
+
+            </CardBody>
+            <CardFooter>
+                <Div Display="Display.Flex" Flex="Flex.Row.Grow" Margin="Margin.Is2">
+                    <Button Color="Color.Primary" Margin="Margin.Is2" Clicked="OnStartBtnClicked">@_buttonCaption</Button>
+                    <Button Color="Color.Secondary" Margin="Margin.Is2" Clicked="OnSaveBtnClicked">Save</Button>
+                    <Button Color="Color.Secondary" Margin="Margin.Is2" Clicked="OnLoadBtnClicked">Load</Button>
+                </Div>
+            </CardFooter>
+        </Card>
+    </Column>
+    <Column>
+        <ManualTuner></ManualTuner>
+    </Column>
+</Row>
+<Row>
+</Row>
+
+<SaveDialog @ref="_saveDialog" OnLoadFinished="UpdateChart"></SaveDialog>
+
+
+@code {
+    private IDisposable _subscription;
+
+    private SingleChart _chart;
+    private string _buttonCaption;
+    private int _progressValue;
+
+    private AgentStatus _status = new();
+
+    public IJob Job { get; set; }
+
+    private DateTime _startTime;
+    private System.Timers.Timer _timer;
+
+    private string _elapsedTime;
+
+    private string _errorMessage; 
+
+    private SaveDialog _saveDialog;
+
+    protected override Task OnInitializedAsync()
+    {
+        _buttonCaption = "Start";
+        _timer = new System.Timers.Timer(1000);
+        _timer.Enabled = false;
+        _timer.Elapsed += OnTimerElapsed;
+
+        //_subscription = Job.Stats.Subscribe(s => _chart.AddData(s.duration));
+        _subscription = TuningAgent.Instance.StatusChanged.Subscribe(
+            s => 
+            {
+                if (s.AgentState != "Monitoring")
+                {
+                    _status = s;
+                    _chart.AddData(s.CurrentLatency);
+                    _progressValue = s.DataCollectionProgress;
+
+                    if(_progressValue >= 100)
+                    {
+                        Job.Stop();
+                        _buttonCaption = "Start";
+                        _timer.Enabled = false;
+                    }
+
+                    _errorMessage = Job.Message;
+
+                    InvokeAsync(() => StateHasChanged());
+                }
+            });
+
+
+        return base.OnInitializedAsync();
+    }
+
+    public void Dispose()
+    {
+        _subscription?.Dispose();
+        _timer.Elapsed -= OnTimerElapsed;
+        _timer.Dispose();
+    }
+
+    private void OnTimerElapsed(Object source, System.Timers.ElapsedEventArgs e)
+    {
+        var elapsed = e.SignalTime - _startTime;
+        _elapsedTime = elapsed.ToString("g");
+        InvokeAsync(() => StateHasChanged());
+    }
+
+    private void OnStartBtnClicked()
+    {
+        Job = Store.SelectedJob;
+        Job.NumParallelExecutions = Store.NumParallelExecutions;
+        Job.JobParameter = Store.JobParameter;
+        Job.JobLimit = Store.JobLimit;
+        if (!Job.IsRunning)
+        {
+            _startTime = DateTime.Now;
+            TuningAgent.Instance.ActivateAutomaticTuningMode();
+        }
+        Job.Toggle(1);
+        _buttonCaption = Job.IsRunning ? "Stop" : "Start";
+        _timer.Enabled = Job.IsRunning;
+    }
+
+    private async Task OnSaveBtnClicked()
+    { 
+        await _saveDialog.Show(true);
+    }
+
+    private async Task OnLoadBtnClicked()
+    {
+        //TuningAgent.Instance.Load("experiencereplay.json");
+        await _saveDialog.Show(false);
+    }
+
+    private async Task UpdateChart()
+    {
+        await _chart.Clear();
+        for (int i = 0; i < TuningAgent.Instance.ExperienceReplay.Size; i++)
+        {
+            var entry = TuningAgent.Instance.ExperienceReplay.GetItem(i);
+            _chart.AddData(entry.Latency);
+        }
+
+    }
+
+}

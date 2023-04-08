@@ -1,0 +1,113 @@
+﻿@using Blazorise.Charts
+@using System.Text
+
+<Div>
+    <LineChart @ref="lineChart" TItem="float" OptionsObject="@chartOptions" />
+    <Badge @onclick="OnExportClicked" Background="Background.Info">Export</Badge>
+</Div>
+
+<ShowDataDialog @ref="_showDataDialog"></ShowDataDialog>
+
+@code {
+
+    [Parameter]
+    public string DataLabel { get; set; }
+
+    LineChart<float> lineChart;
+
+    List<string> _labels = new List<string>();
+    List<float> _data = new List<float>();
+
+    LineChartOptions _lineChartOptions;
+
+    ShowDataDialog _showDataDialog;
+
+    private int _iteration = 1;
+
+    object chartOptions = new
+    {
+        Scales = new
+        {
+            YAxes = new[] {
+                new {
+                    Ticks = new
+                    {
+                        BeginAtZero = true,
+                        Min = 0,
+                        Max = 500,
+                    }
+                }
+    }
+        }
+    };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await lineChart.AddLabelsDatasetsAndUpdate(_labels, GetLineChartDataset());
+
+            await lineChart.AddData(0, 0);
+            await lineChart.AddLabels(0);
+            await lineChart.Update();
+        }
+    }
+
+    LineChartDataset<float> GetLineChartDataset()
+    {
+        return new LineChartDataset<float>
+            {
+                Label = DataLabel,
+                Data = _data,
+                Fill = true,
+                PointRadius = 1,
+                CubicInterpolationMode = "monotone",
+            };
+    }
+
+    public void AddData(float data)
+    { 
+        lineChart.AddData(0, data);
+
+        lineChart.AddLabels(_iteration++);
+        lineChart.Update();
+        InvokeAsync(() => StateHasChanged());
+    }
+
+    public async Task Clear()
+    {
+        _iteration = 1;
+        _labels.Clear();
+        _data.Clear();
+        lineChart.Data.Datasets.Clear();
+        lineChart.Data.Labels.Clear();
+        await lineChart.Clear();
+
+        await lineChart.AddLabelsDatasetsAndUpdate(_labels, GetLineChartDataset());
+
+        await lineChart.AddData(0, 0);
+        await lineChart.AddLabels(0);
+        await lineChart.Update();
+    }
+
+    private async Task OnExportClicked()
+    {
+        StringBuilder data = new ();
+
+        float value = 0f;
+        int index = 0;
+        foreach (var label in lineChart.Data.Labels)
+        {
+            value = lineChart.Data.Datasets[0].Data[index];
+            //string item = label.ToString() + "," + value.ToString();
+            string item = value.ToString();
+            data.AppendLine(item);
+            index++;
+        }
+        
+
+        await _showDataDialog.Show(data.ToString());
+        Console.WriteLine("Exporting chart");
+    }
+
+}

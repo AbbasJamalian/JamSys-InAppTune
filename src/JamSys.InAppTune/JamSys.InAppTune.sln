@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.32328.378
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JamSys.InAppTune.Host", "JamSys.InAppTune.Host\JamSys.InAppTune.Host.csproj", "{D5D7619B-3707-4E26-858B-1D6A85742C28}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JamSys.InAppTune", "JamSys.InAppTune\JamSys.InAppTune.csproj", "{425A1282-2CC9-47BF-A91A-E1E78E98677D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D5D7619B-3707-4E26-858B-1D6A85742C28}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D5D7619B-3707-4E26-858B-1D6A85742C28}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D5D7619B-3707-4E26-858B-1D6A85742C28}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D5D7619B-3707-4E26-858B-1D6A85742C28}.Release|Any CPU.Build.0 = Release|Any CPU
+		{425A1282-2CC9-47BF-A91A-E1E78E98677D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{425A1282-2CC9-47BF-A91A-E1E78E98677D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{425A1282-2CC9-47BF-A91A-E1E78E98677D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{425A1282-2CC9-47BF-A91A-E1E78E98677D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9F05ECB6-9890-4A7B-90EC-67D781B60F0B}
+	EndGlobalSection
+EndGlobal

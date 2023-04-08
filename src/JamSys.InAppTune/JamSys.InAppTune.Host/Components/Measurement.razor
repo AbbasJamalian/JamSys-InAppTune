@@ -1,0 +1,116 @@
+﻿@using Blazorise
+@using JamSys.InAppTune.Agent
+@using JamSys.InAppTune.Host.Jobs
+
+@implements IDisposable
+
+@inject Store Store
+
+<Row>
+    <Column>
+        <Card>
+            <CardBody>
+                <SingleChart @ref="_latencyChart" DataLabel="Latency (ms)"></SingleChart>
+                <ListGroup>
+                    <ListGroupItem>Average Latency (ms) <Badge Color="Color.Warning">@_averageLatency</Badge></ListGroupItem>
+                    <ListGroupItem>Average Throughput (tx/s) <Badge Color="Color.Warning">@_averageThroughput</Badge></ListGroupItem>
+                </ListGroup>
+
+            </CardBody>
+            <CardFooter>
+                <Div Display="Display.Flex" Flex="Flex.Row.Grow" Margin="Margin.Is2">
+                    <Button Color="Color.Primary" Margin="Margin.Is2" Clicked="OnStartBtnClicked">@_buttonCaption</Button>
+                    <Button Color="Color.Secondary" Margin="Margin.Is2" Clicked="OnResetBtnClicked">Reset</Button>
+                </Div>
+            </CardFooter>
+        </Card>
+    </Column>
+    <Column>
+        <Card>
+            <CardBody>
+                <SingleChart @ref="_throughputChart" DataLabel="Throughput (thx per second)"></SingleChart>
+            </CardBody>
+        </Card>
+    </Column>
+</Row>
+
+
+@code {
+    private IDisposable _subscription;
+
+    private SingleChart _latencyChart;
+    private SingleChart _throughputChart;
+    private string _buttonCaption;
+
+    private float _averageLatency;
+    private float _averageThroughput;
+    private List<float> _latencies = new();
+    private List<float> _throughputs = new();
+
+    public IJob Job { get; set; }
+
+
+    protected override Task OnInitializedAsync()
+    {
+        Job = Store.SelectedJob;
+        UpdateCaption();
+
+        //_subscription = Job.Stats.Subscribe(s => _chart.AddData(s.duration));
+        _subscription = TuningAgent.Instance.StatusChanged.Subscribe(
+            s => 
+            {
+                if (s.AgentState.Equals("Monitoring"))
+                {
+                    _latencyChart.AddData(s.CurrentLatency);
+                    _latencies.Add(s.CurrentLatency);
+
+                    float throughput = s.Throughput;
+                    _throughputChart.AddData(throughput);
+                    _throughputs.Add(throughput);
+
+                    _averageLatency = _latencies.Average();
+                    _averageThroughput = _throughputs.Average();
+                    InvokeAsync(() => StateHasChanged());
+                }
+            });
+
+        return base.OnInitializedAsync();
+    }
+
+    public void Dispose()
+    {
+        _subscription?.Dispose();
+    }
+
+    private void UpdateCaption()
+    {
+        if (Job != null)
+            _buttonCaption = Job.IsRunning ? "Stop" : "Start";
+        else
+            _buttonCaption = "Start";
+    }
+
+    private void OnStartBtnClicked()
+    {
+        TuningAgent.Instance.Monitor();
+        Job = Store.SelectedJob;
+        Job.NumParallelExecutions = Store.NumParallelExecutions;
+        Job.JobParameter = Store.JobParameter;
+        Job.JobLimit = Store.JobLimit;
+        Job.Toggle(1);
+        UpdateCaption();
+    }
+
+    private void OnResetBtnClicked()
+    {
+        _latencies.Clear();
+        _throughputs.Clear();
+        Job.Stop();
+
+        _latencyChart.Clear();
+        _throughputChart.Clear();
+
+        UpdateCaption();
+    }
+
+}

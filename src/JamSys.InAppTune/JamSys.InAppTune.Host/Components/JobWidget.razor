@@ -1,0 +1,131 @@
+﻿@using Blazorise
+@using Blazorise.Charts
+
+@using System.Reactive.Linq
+@using JamSys.InAppTune.Host.Jobs
+
+
+<Card Margin="Margin.Is4.OnY">
+    <CardBody>
+        <CardTitle Size="5">@Job.Title</CardTitle>
+        <CardText>
+            <Badge Color="Color.Primary">@_iteration</Badge>
+            <Badge Color="Color.Success">@_min</Badge>
+
+            <Badge Color="Color.Info">@_duration</Badge>
+            <Badge Color="Color.Warning">@_max</Badge>
+
+
+            <LineChart @ref="lineChart" TItem="long" OptionsObject="@chartOptions" />
+
+            <Text>@Job.Message</Text>
+        </CardText>
+        <CardFooter>
+            <Button Color="Color.Primary" @onclick="ToggleStart">@_buttonCaption</Button>
+        </CardFooter>
+    </CardBody>
+</Card>
+
+@code {
+    [Parameter]
+    public Job Job { get; set; }
+
+    [Parameter]
+    public int Throttle { get; set; } = 1;
+
+    private string _buttonCaption;
+
+    private string _status;
+
+    private string _iteration;
+
+    private string _duration;
+
+    private string _min;
+
+    private string _max;
+
+    LineChart<long> lineChart;
+
+    List<string> _labels = new List<string>();
+    List<long> _data = new List<long>();
+
+    LineChartOptions _lineChartOptions;
+
+    object chartOptions = new
+    {
+        Scales = new
+        {
+            YAxes = new[] {
+                new {
+                    Ticks = new
+                    {
+                        BeginAtZero = true,
+                        Min = 0,
+                        Max = 500,
+                    }
+                }
+            }
+        }
+    };
+
+    protected override Task OnInitializedAsync()
+    {
+        _lineChartOptions = new()
+        {
+        };
+
+
+        _buttonCaption = Job.IsRunning ? "Stop" : "Start";
+        Job.Stats.Where(s => s.iteration == 1 || s.iteration % Throttle == 0)
+        .Subscribe(s =>
+            {
+                _iteration = s.iteration.ToString();
+                _duration = s.duration.ToString();
+
+                _min = Job.Min.ToString();
+                _max = Job.Max.ToString();
+
+                lineChart.AddData(0, Job.CurrentElapsed);
+                lineChart.AddLabels(_iteration);
+                lineChart.Update();
+                InvokeAsync(() => StateHasChanged());
+            });
+
+        return base.OnInitializedAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            //await lineChart.SetOptions((LineChartOptions) chartOptions);
+
+            await lineChart.AddLabelsDatasetsAndUpdate(_labels, GetLineChartDataset());
+
+            await lineChart.AddData(0, 0);
+            await lineChart.AddLabels(0);
+            await lineChart.Update();
+
+        }
+    }
+
+    LineChartDataset<long> GetLineChartDataset()
+    {
+        return new LineChartDataset<long>
+            {
+                Label = "Latency",
+                Data = _data,
+                Fill = true,
+                PointRadius = 1,
+                CubicInterpolationMode = "monotone",
+            };
+    }
+
+    private void ToggleStart()
+    {
+        Job.Toggle(1);
+        _buttonCaption = Job.IsRunning ? "Stop" : "Start";
+    }
+
+}
